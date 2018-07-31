@@ -1,33 +1,43 @@
-FROM alpine:3.8
+FROM alpine:3.8 AS builder
 
 # show backtraces
 ENV RUST_BACKTRACE 1
 
+RUN apk add --no-cache \
+  build-base \
+  cargo \
+  cmake \
+  eudev-dev \
+  linux-headers \
+  perl \
+  rust
+
+RUN wget -qO- https://github.com/paritytech/parity-ethereum/archive/v1.11.8.tar.gz | tar xz
+
+WORKDIR /parity-ethereum-1.11.8
+RUN cargo build --bin parity --release --target x86_64-alpine-linux-musl --verbose --color never
+RUN strip target/x86_64-alpine-linux-musl/release/parity
+
+
+FROM alpine:3.8
+
+ENV RUST_BACKTRACE 1
+
+RUN apk add --no-cache \
+  libstdc++ \
+  eudev-libs \
+  libgcc
+
 RUN addgroup -g 1000 parity \
   && adduser -u 1000 -G parity -s /bin/sh -D parity
 
-RUN parityVersion='1.10.9' \
-  && apk add --no-cache \
-    eudev \
-    rust \
-  && apk add --no-cache --virtual /.build-deps \
-    build-base \
-    cargo \
-    eudev-dev \
-    file \
-    linux-headers \
-  && mkdir build \
-  && cd build \
-  && wget -O parity.tar.gz https://github.com/paritytech/parity/archive/v$parityVersion.tar.gz \
-  && tar -xf parity.tar.gz \
-  && cd parity-$parityVersion \
-  && cargo build --color never --bin parity --release --verbose \
-  && strip -o /home/parity/parity target/release/parity \
-  && chown parity /home/parity/parity \
-  && rm -rf \
-    /build \
-    /root/.cargo \
-  && apk del /.build-deps
-
 USER parity
-ENTRYPOINT ["/home/parity/parity"]
+
+# UI & P2P & RPC & WS & IPFS & SECURE STORE & SECURE STORE HTTP & STRATUM
+EXPOSE 8180 30303 8545 8546 5001 8083 8082 8008
+
+WORKDIR /home/parity
+
+COPY --chown=parity:parity --from=builder /parity-ethereum-1.11.8/target/x86_64-alpine-linux-musl/release/parity ./
+
+ENTRYPOINT ["./parity"]
