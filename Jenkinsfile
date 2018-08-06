@@ -44,7 +44,6 @@ pipeline {
             }
         }
         stage("Build docker image") {
-            when { not { tag "*" } }
             steps {
                 script {
                     echo " ============== start building :latest from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
