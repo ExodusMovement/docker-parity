@@ -1,6 +1,6 @@
 #!groovy
 // Build and push docker images by branches and tags
-// Required: "Basic Branch Build Strategies Plugin"
+// Required: "Basic Branch Build Strategies Plugin" and "GitHub SQS plugin"
 // GitHub Behaviours: Discover tags
 // GitHub Behaviours: Clean Before Checkout
 // GitHub Build strategies: Regular Branches
@@ -8,7 +8,21 @@
 // Scan Repository Triggers Periodically  if no hooks
 properties([disableConcurrentBuilds()])
 
+def getSlackJobNameMsg () {
+    return "<${env.BUILD_URL}console|#${env.BUILD_NUMBER}>"
+}
+
+def getSlackProjectNameMsg () {
+    return "<${REPO_URL}/tree/${GIT_BRANCH}|${REPO_NAME}:${GIT_BRANCH}> (<${REPO_URL}/commit/${GIT_COMMIT}|${GIT_COMMIT_SHORT}>)"
+}
+
 pipeline {
+    environment {
+        GIT_COMMIT_SHORT = "${env.GIT_COMMIT[0..7]}" // first 7 symbols of commit hash (because GH show only 7)
+        REPO_URL = "${GIT_URL[0..-5]}" // removed postfix `.git`
+        REPO_NAME = "${REPO_URL - ~/.*\//}" // removed anything before `docker-`
+        IMAGE_NAME = "${REPO_NAME.substring(7)}" // remove prefix `docker-`
+    }
     agent {
         label 'master'
     }
@@ -23,26 +37,24 @@ pipeline {
         stage("Preparations") {
             steps {
                 script {
-                    // getting repo url and cutting it to get docker image name
-                    sh """
-                    echo ${GIT_URL} | sed 's@.*-@@' | rev | cut -c 5- | rev | tr -d '\n' >  ${WORKSPACE}/env.GIT_URL
-                    """
-                    env.GIT_REPO = readFile (file: "${WORKSPACE}/env.GIT_URL")
                     slackSend channel: '#jenkins',
                         color: 'good',
-                        message: "Job for building ${env.GIT_REPO}:${GIT_BRANCH} started: <${env.BUILD_URL}|View Result>"
+                        message: "Job ${getSlackJobNameMsg()} for building ${getSlackProjectNameMsg()} started"
                 }
             }
         }
-        stage("Build docker image :latest") {
+        stage("Build docker image") {
             when { not { tag "*" } }
             steps {
                 script {
-                    echo " ============== start building :latest from ${env.GIT_REPO}:${GIT_BRANCH} =================="
+                    echo " ============== start building :latest from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     sh """
-                    docker build -t exodusmovement/${env.GIT_REPO}:latest .
+                    docker build \
+                        -t exodusmovement/${IMAGE_NAME}:latest \
+                        -t exodusmovement/${IMAGE_NAME}:${GIT_BRANCH} \
+                        .
                     """
-                    currentBuild.description = "${env.GIT_REPO}:latest built, "
+                    currentBuild.description = "Image built, "
                 }
             }
         }
@@ -50,25 +62,13 @@ pipeline {
             when { not { tag "*" } }
             steps {
                 script {
-                    echo " ============== start pushing :latest from ${env.GIT_REPO}:${GIT_BRANCH} =================="
+                    echo " ============== start pushing :latest from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     withDockerRegistry([ credentialsId: "exodusmovement-docker-creds", url: "" ]) {
                         sh """
-                        docker push exodusmovement/${env.GIT_REPO}:latest
+                        docker push exodusmovement/${IMAGE_NAME}:latest
                         """
                     }
                     currentBuild.description += "and pushed to registry"
-                }
-            }
-        }
-        stage("Build docker image :release") {
-            when { tag "*" }
-            steps {
-                script {
-                    echo " ============== start building :${GIT_BRANCH} from ${env.GIT_REPO}:${GIT_BRANCH} =================="
-                    sh """
-                    docker build -t exodusmovement/${env.GIT_REPO}:${GIT_BRANCH} .
-                    """
-                    currentBuild.description = "${env.GIT_REPO}:${GIT_BRANCH} built, "
                 }
             }
         }
@@ -76,10 +76,10 @@ pipeline {
             when { tag "*" }
             steps {
                 script {
-                    echo " ============== start pushing ${GIT_BRANCH} from ${env.GIT_REPO}:${GIT_BRANCH} =================="
+                    echo " ============== start pushing ${GIT_BRANCH} from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     withDockerRegistry([ credentialsId: "exodusmovement-docker-creds", url: "" ]) {
                         sh """
-                        docker push exodusmovement/${env.GIT_REPO}:${GIT_BRANCH}
+                        docker push exodusmovement/${IMAGE_NAME}:${GIT_BRANCH}
                         """
                     }
                     currentBuild.description += "and pushed to registry"
@@ -91,17 +91,17 @@ pipeline {
         failure {
             slackSend channel: '#jenkins',
                 color: 'danger',
-                message: "Job for building ${env.GIT_REPO}:${GIT_BRANCH} failed: <${env.BUILD_URL}|View Result>"
+                message: "Job ${getSlackJobNameMsg()} for building ${getSlackProjectNameMsg()} failed"
         }
         aborted {
             slackSend channel: '#jenkins',
                 color: 'warning',
-                message: "Job for building ${env.GIT_REPO}:${GIT_BRANCH} aborted: <${env.BUILD_URL}|View Result>"
+                message: "Job ${getSlackJobNameMsg()} for building ${getSlackProjectNameMsg()} aborted"
         }
         success {
             slackSend channel: '#jenkins',
                 color: 'good',
-                message: "Job for building ${env.GIT_REPO}:${GIT_BRANCH} finished: <${env.BUILD_URL}|View Result>"
+                message: "Job ${getSlackJobNameMsg()} for building ${getSlackProjectNameMsg()} finished in ${currentBuild.durationString[0..-13]}"
         }
     }
 }
