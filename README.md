@@ -9,3 +9,4 @@ Branches and releases:
 
   - [1.11.8](https://github.com/ExodusMovement/docker-parity/tree/1.11.8)
     - [1.11.8-001](https://github.com/ExodusMovement/docker-parity/tree/1.11.8-001)
+    - [1.11.8-002](https://github.com/ExodusMovement/docker-parity/tree/1.11.8-002)
