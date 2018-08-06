@@ -38,6 +38,7 @@ EXPOSE 8180 30303 8545 8546 5001 8083 8082 8008
 
 WORKDIR /home/parity
 
+RUN mkdir -p /home/parity/.local/share/io.parity.ethereum/
 COPY --chown=parity:parity --from=builder /parity-ethereum-1.11.8/target/x86_64-alpine-linux-musl/release/parity ./
 
 ENTRYPOINT ["./parity"]
