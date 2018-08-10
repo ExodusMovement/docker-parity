@@ -15,7 +15,7 @@ RUN apk add --no-cache \
 RUN wget -qO- https://github.com/paritytech/parity-ethereum/archive/v1.11.8.tar.gz | tar xz
 
 WORKDIR /parity-ethereum-1.11.8
-RUN cargo build --bin parity --release --target x86_64-alpine-linux-musl --verbose --color never
+RUN cargo build --bin parity --release --features final --target x86_64-alpine-linux-musl --verbose --color never
 RUN strip target/x86_64-alpine-linux-musl/release/parity
 
 
