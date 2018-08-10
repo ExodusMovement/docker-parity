@@ -31,15 +31,13 @@ RUN apk add --no-cache \
   eudev-libs \
   libgcc
 
+COPY --from=builder /parity-ethereum/target/x86_64-alpine-linux-musl/release/parity /usr/local/bin/parity
+
 RUN addgroup -g 1000 parity \
   && adduser -u 1000 -G parity -s /bin/sh -D parity
 
 USER parity
-
 RUN mkdir -p /home/parity/.local/share/io.parity.ethereum/
-
-WORKDIR /home/parity
-COPY --chown=parity:parity --from=builder /parity-ethereum/target/x86_64-alpine-linux-musl/release/parity ./
 
 # UI & P2P & RPC & WS & IPFS & SECURE STORE & SECURE STORE HTTP & STRATUM
 EXPOSE 8180 30303 8545 8546 5001 8083 8082 8008
@@ -54,7 +52,7 @@ ENV \
   PARITY_JSONRPC_SERVER_THREADS=1 \
   PARITY_ARGUMENTS=""
 
-CMD exec ./parity \
+CMD exec parity \
   --mode $PARITY_MODE \
   --chain $PARITY_CHAIN \
   --ports-shift=$PARITY_PORTS_SHIFT \
