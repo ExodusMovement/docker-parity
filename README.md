@@ -1,1 +1,1 @@
-https://github.com/paritytech/parity-ethereum/releases/tag/v1.11.8
+https://github.com/paritytech/parity-ethereum/releases/tag/v2.0.5

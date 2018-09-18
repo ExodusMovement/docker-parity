@@ -5,7 +5,7 @@
 // GitHub Behaviours: Clean Before Checkout
 // GitHub Build strategies: Regular Branches
 // GitHub Build strategies: Tags
-// Scan Repository Triggers Periodically  if no hooks
+// Scan Repository Triggers Periodically if no hooks
 properties([disableConcurrentBuilds()])
 
 def getSlackJobNameMsg () {
@@ -46,7 +46,7 @@ pipeline {
         stage("Build docker image") {
             steps {
                 script {
-                    echo " ============== start building :latest from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
+                    echo " ============== start building image from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     sh """
                     docker build \
                         -t quay.io/exodusmovement/${IMAGE_NAME}:latest \
@@ -61,7 +61,7 @@ pipeline {
             when { not { tag "*" } }
             steps {
                 script {
-                    echo " ============== start pushing :latest from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
+                    echo " ============== start pushing tag `latest` from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     withDockerRegistry([ credentialsId: "exodusmovement-quay-creds", url: "https://quay.io" ]) {
                         sh """
                         docker push quay.io/exodusmovement/${IMAGE_NAME}:latest
@@ -75,7 +75,7 @@ pipeline {
             when { tag "*" }
             steps {
                 script {
-                    echo " ============== start pushing ${GIT_BRANCH} from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
+                    echo " ============== start pushing tag `${GIT_BRANCH}` from exodusmovement/${REPO_NAME}:${GIT_BRANCH} =================="
                     withDockerRegistry([ credentialsId: "exodusmovement-quay-creds", url: "https://quay.io" ]) {
                         sh """
                         docker push quay.io/exodusmovement/${IMAGE_NAME}:${GIT_BRANCH}
