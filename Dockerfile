@@ -2,7 +2,7 @@ FROM alpine:3.8 AS builder
 
 # show backtraces
 ENV RUST_BACKTRACE 1
-ENV BUILD_TAG 2.0.5
+ENV BUILD_TAG 2.0.8
 
 RUN apk add --no-cache \
   build-base \
